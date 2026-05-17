@@ -1,15 +1,15 @@
 export function InsightSection() {
   return (
     <section className="bg-[#05ed96] overflow-hidden relative">
-      <div className="max-w-[1100px] mx-auto px-10 py-20">
+      <div className="max-w-[1100px] mx-auto px-5 sm:px-8 md:px-10 py-14 md:py-20">
         <h2
-          className="font-[family-name:var(--font-unbounded)] uppercase text-[#080808] mb-12 reveal"
-          style={{ fontSize: 'clamp(2rem,4vw,4rem)', lineHeight: 1.05, letterSpacing: '-0.02em' }}
+          className="font-[family-name:var(--font-unbounded)] uppercase text-[#080808] mb-8 md:mb-12 reveal"
+          style={{ fontSize: 'clamp(1.7rem,6vw,4rem)', lineHeight: 1.05, letterSpacing: '-0.02em' }}
         >
           Saben que deben reciclar,<br />pero no saben dónde.
         </h2>
 
-        <div className="grid md:grid-cols-2 gap-16 reveal">
+        <div className="grid md:grid-cols-2 gap-8 md:gap-16 reveal">
           <p className="text-[1.05rem] text-[rgba(8,8,8,0.72)] leading-[1.75] font-[family-name:var(--font-instrument-serif)]">
             En Chile existe infraestructura de reciclaje. Puntos limpios, campanas, sistemas de retorno
             activos en todo el país.{' '}

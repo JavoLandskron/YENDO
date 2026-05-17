@@ -1,11 +1,17 @@
 'use client'
 
-import { useState, useMemo, useEffect, useCallback } from 'react'
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import type { Point } from '@/lib/types'
-import { haversineDistance, filterPoints } from '@/lib/map-utils'
+import { haversineDistance } from '@/lib/map-utils'
 import { Sidebar } from './Sidebar'
+
+const SEARCH_DEBOUNCE_MS = 300
+
+interface PointsResponse {
+  points: Point[]
+}
 
 const MapView = dynamic(() => import('./MapView').then((m) => m.MapView), {
   ssr: false,
@@ -18,6 +24,17 @@ const MapView = dynamic(() => import('./MapView').then((m) => m.MapView), {
   ),
 })
 
+function useDebouncedValue<T>(value: T, delay: number) {
+  const [debounced, setDebounced] = useState(value)
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebounced(value), delay)
+    return () => clearTimeout(timer)
+  }, [value, delay])
+
+  return debounced
+}
+
 export function MapApp() {
   const [allPoints, setAllPoints] = useState<Point[]>([])
   const [pointsLoading, setPointsLoading] = useState(true)
@@ -27,28 +44,71 @@ export function MapApp() {
   const [filter, setFilter] = useState('all')
   const [notification, setNotification] = useState<string | null>(null)
   const [sheetOpen, setSheetOpen] = useState(false)
+  const notificationTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const debouncedSearch = useDebouncedValue(search.trim(), SEARCH_DEBOUNCE_MS)
+
+  const showNotif = useCallback((msg: string) => {
+    if (notificationTimer.current) {
+      clearTimeout(notificationTimer.current)
+    }
+
+    setNotification(msg)
+    notificationTimer.current = setTimeout(() => setNotification(null), 3500)
+  }, [])
 
   useEffect(() => {
-    fetch('/api/points')
+    const controller = new AbortController()
+    const params = new URLSearchParams()
+
+    if (filter !== 'all') {
+      params.set('type', filter)
+    }
+
+    if (debouncedSearch) {
+      params.set('q', debouncedSearch)
+    }
+
+    const query = params.toString()
+    const url = query ? `/api/points?${query}` : '/api/points'
+
+    fetch(url, { signal: controller.signal })
       .then((res) => {
         if (!res.ok) throw new Error('Error al cargar los puntos')
-        return res.json() as Promise<{ points: Point[] }>
+        return res.json() as Promise<PointsResponse>
       })
       .then((data) => setAllPoints(data.points))
-      .catch(() => showNotif('No se pudieron cargar los puntos. Intenta recargar la página.'))
-      .finally(() => setPointsLoading(false))
+      .catch((error: unknown) => {
+        if (error instanceof DOMException && error.name === 'AbortError') return
+        showNotif('No se pudieron cargar los puntos. Intenta recargar la página.')
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) {
+          setPointsLoading(false)
+        }
+      })
+
+    return () => controller.abort()
+  }, [filter, debouncedSearch, showNotif])
+
+  useEffect(() => {
+    return () => {
+      if (notificationTimer.current) {
+        clearTimeout(notificationTimer.current)
+      }
+    }
   }, [])
 
   useEffect(() => {
     if (!navigator.geolocation) return
     navigator.geolocation.getCurrentPosition(
       (pos) => {
+        setSelectedIdx(null)
         setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude })
         showNotif('Mostrando los puntos más cercanos a tu ubicación.')
       },
       () => { /* permiso denegado — el botón sigue disponible */ }
     )
-  }, [])
+  }, [showNotif])
 
   const points = useMemo(() => {
     if (!userLocation) return allPoints
@@ -60,19 +120,10 @@ export function MapApp() {
       .sort((a, b) => (a._d ?? Infinity) - (b._d ?? Infinity))
   }, [userLocation, allPoints])
 
-  const filteredByType = useMemo(
-    () => filterPoints(points, filter, ''),
-    [points, filter]
-  )
-
-  const filteredForSidebar = useMemo(
-    () => filterPoints(filteredByType, 'all', search),
-    [filteredByType, search]
-  )
-
   function handleFilterChange(newFilter: string) {
     setFilter(newFilter)
     setSelectedIdx(null)
+    setPointsLoading(true)
   }
 
   // useCallback evita que handleSelect cambie de referencia en cada render,
@@ -89,16 +140,12 @@ export function MapApp() {
     }
     navigator.geolocation.getCurrentPosition(
       (pos) => {
+        setSelectedIdx(null)
         setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude })
         showNotif('Ubicación encontrada. Mostrando los más cercanos.')
       },
       () => showNotif('No se pudo obtener tu ubicación.')
     )
-  }
-
-  function showNotif(msg: string) {
-    setNotification(msg)
-    setTimeout(() => setNotification(null), 3500)
   }
 
   return (
@@ -129,13 +176,21 @@ export function MapApp() {
           <input
             type="text"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              setSearch(e.target.value)
+              setSelectedIdx(null)
+              setPointsLoading(true)
+            }}
             placeholder="Buscar dirección..."
             className="w-full bg-[rgba(255,255,255,0.04)] border border-[rgba(245,242,235,0.08)] rounded-lg pl-8 pr-8 py-2 text-[#f5f2eb] font-[family-name:var(--font-dm-sans)] text-[0.8rem] outline-none placeholder:text-[rgba(245,242,235,0.2)] focus:border-[rgba(5,237,150,0.5)] focus:bg-[rgba(5,237,150,0.03)] transition-all duration-200"
           />
           {search && (
             <button
-              onClick={() => setSearch('')}
+              onClick={() => {
+                setSearch('')
+                setSelectedIdx(null)
+                setPointsLoading(true)
+              }}
               className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[rgba(245,242,235,0.3)] hover:text-[#05ed96] transition-colors text-[0.75rem] leading-none"
             >
               ✕
@@ -175,8 +230,9 @@ export function MapApp() {
 
         {/* Sidebar: left panel on desktop, bottom sheet on mobile */}
         <Sidebar
-          points={filteredForSidebar}
-          total={filteredForSidebar.length}
+          key={`${filter}:${debouncedSearch}`}
+          points={points}
+          total={points.length}
           selectedIdx={selectedIdx}
           onSelect={handleSelect}
           onLocate={handleLocate}
@@ -186,25 +242,39 @@ export function MapApp() {
           onSheetToggle={() => setSheetOpen((o) => !o)}
         />
 
-        {/* Map: muestra exactamente el mismo conjunto que el sidebar */}
-        <div className="absolute inset-0 md:relative md:flex-1">
+        {/* Map + botón de geolocalización dentro del mismo contenedor.
+            `isolate` crea un stacking context que encapsula los z-index internos
+            de Leaflet (tiles 200, markers 600, popups 700) y evita que tapen el
+            Sidebar (z-[200]) en móvil. */}
+        <div className="absolute inset-0 isolate md:relative md:flex-1">
           <MapView
-            points={filteredForSidebar}
+            points={points}
             selectedIdx={selectedIdx}
             onSelect={handleSelect}
             userLocation={userLocation}
           />
-        </div>
 
-        {/* Mobile: floating locate button above the sheet */}
-        <button
-          onClick={handleLocate}
-          aria-label="Mi ubicación"
-          className="md:hidden absolute right-4 z-[300] bg-[#080808] border border-[rgba(5,237,150,0.25)] rounded-full w-11 h-11 flex items-center justify-center text-[#05ed96] text-[1.1rem] transition-all active:scale-95 shadow-lg"
-          style={{ bottom: sheetOpen ? 'calc(72dvh + 12px)' : '184px' }}
-        >
-          ◎
-        </button>
+          {/* Botón flotante dentro del mapa — siempre encima de Leaflet.
+              En móvil se ubica sobre el bottom sheet (colapsado o abierto). */}
+          <button
+            onClick={handleLocate}
+            aria-label="Mi ubicación"
+            title="Mi ubicación"
+            style={{
+              bottom: sheetOpen ? 'calc(72dvh + 1rem)' : 'calc(116px + 1rem)',
+            }}
+            className="absolute right-4 z-[1001] bg-[#080808] border border-[rgba(5,237,150,0.3)] rounded-2xl flex items-center gap-2 px-3 h-11 md:h-10 text-[#05ed96] transition-[bottom,transform,background-color,border-color] duration-300 active:scale-95 hover:border-[#05ed96] hover:bg-[rgba(5,237,150,0.06)] shadow-[0_8px_24px_rgba(0,0,0,0.5)] md:bottom-14!"
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>
+              <circle cx="12" cy="12" r="9" strokeOpacity="0.3"/>
+            </svg>
+            <span className="font-[family-name:var(--font-dm-sans)] text-[0.72rem] font-medium tracking-[0.06em] uppercase hidden md:block">
+              Mi ubicación
+            </span>
+          </button>
+        </div>
       </div>
 
       {/* ── Notification ─────────────────────────────────── */}

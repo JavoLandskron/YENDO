@@ -42,14 +42,14 @@ export default function SuscripcionPage() {
         <FaqSection />
         <CtaFinal />
       </main>
-      <footer className="bg-[#080808] border-t border-[rgba(245,242,235,0.06)] px-10 py-8 flex items-center justify-between flex-wrap gap-4">
-        <div className="font-[family-name:var(--font-unbounded)] text-[1.25rem] text-[#05ed96] tracking-[0.08em]">
+      <footer className="bg-[#080808] border-t border-[rgba(245,242,235,0.06)] px-5 sm:px-8 md:px-10 py-7 md:py-8 flex flex-col md:flex-row md:items-center md:justify-between md:flex-wrap gap-4">
+        <div className="font-[family-name:var(--font-unbounded)] text-[1.1rem] md:text-[1.25rem] text-[#05ed96] tracking-[0.08em]">
           YENDO
         </div>
-        <div className="font-[family-name:var(--font-dm-sans)] text-[0.75rem] text-[rgba(245,242,235,0.25)] tracking-[0.04em]">
+        <div className="font-[family-name:var(--font-dm-sans)] text-[0.7rem] md:text-[0.75rem] text-[rgba(245,242,235,0.3)] tracking-[0.04em]">
           Ida y vuelta · Chile · hola@yendo.cl
         </div>
-        <div className="font-[family-name:var(--font-dm-sans)] text-[0.75rem] text-[rgba(245,242,235,0.25)] tracking-[0.04em]">
+        <div className="font-[family-name:var(--font-dm-sans)] text-[0.7rem] md:text-[0.75rem] text-[rgba(245,242,235,0.2)] tracking-[0.04em]">
           © 2025 YENDO · Todos los derechos reservados
         </div>
       </footer>

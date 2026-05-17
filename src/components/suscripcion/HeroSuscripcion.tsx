@@ -2,7 +2,7 @@ import Link from 'next/link'
 
 export function HeroSuscripcion() {
   return (
-    <section className="min-h-screen flex relative overflow-hidden">
+    <section className="min-h-[100svh] flex relative overflow-hidden">
       {/* Grid */}
       <div
         className="absolute inset-0"
@@ -23,12 +23,12 @@ export function HeroSuscripcion() {
         }}
       />
 
-      <div className="max-w-[1100px] mx-auto w-full px-10 pt-32 pb-20 relative z-10 flex flex-col justify-center">
+      <div className="max-w-[1100px] mx-auto w-full px-5 sm:px-8 md:px-10 pt-24 md:pt-32 pb-14 md:pb-20 relative z-10 flex flex-col justify-center">
         {/* Headline */}
-        <div className="reveal mb-16">
+        <div className="reveal mb-10 md:mb-16">
           <h1
             className="font-[family-name:var(--font-unbounded)] uppercase tracking-[0.01em] leading-[1.1]"
-            style={{ fontSize: 'clamp(1.8rem,3vw,3.5rem)' }}
+            style={{ fontSize: 'clamp(1.8rem,7vw,3.5rem)' }}
           >
             Una lata<br />no es basura<br />si nos<br />
             <span style={{ color: '#05ed96' }}>hacemos<br />cargo.</span>
@@ -36,7 +36,7 @@ export function HeroSuscripcion() {
         </div>
 
         {/* Two columns */}
-        <div className="grid md:grid-cols-2 gap-16 items-start reveal">
+        <div className="grid md:grid-cols-2 gap-10 md:gap-16 items-start reveal">
           {/* Left: argument */}
           <div>
             <span className="inline-block font-[family-name:var(--font-dm-sans)] text-[0.68rem] tracking-[0.16em] uppercase text-[#05ed96] border border-[rgba(5,237,150,0.2)] rounded-full px-3.5 py-1.5 mb-5">
@@ -75,7 +75,7 @@ export function HeroSuscripcion() {
 
           {/* Right: price card */}
           <div
-            className="bg-[#080808] border border-[rgba(5,237,150,0.18)] rounded-[20px] p-9 relative overflow-hidden"
+            className="bg-[#080808] border border-[rgba(5,237,150,0.18)] rounded-[20px] p-6 sm:p-9 relative overflow-hidden"
           >
             <div
               className="absolute top-0 left-0 right-0 h-0.5"

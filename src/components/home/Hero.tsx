@@ -2,7 +2,7 @@ import Link from 'next/link'
 
 export function Hero() {
   return (
-    <section className="min-h-screen flex flex-col justify-end px-10 pb-[4.5rem] relative overflow-hidden">
+    <section className="min-h-[100svh] flex flex-col justify-end px-5 sm:px-8 md:px-10 pt-24 md:pt-28 pb-12 md:pb-[4.5rem] relative overflow-hidden">
       {/* Grid background */}
       <div
         className="absolute inset-0"
@@ -16,8 +16,8 @@ export function Hero() {
 
       <div className="relative z-10 flex flex-col gap-0 flex-1 justify-end">
         {/* Large logo mark */}
-        <div className="reveal mt-auto mb-[-1.5rem]">
-          <svg id="Capa_1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1080" width="320" height="320" style={{ display: 'block' }}>
+        <div className="reveal mt-auto mb-[-1rem] md:mb-[-1.5rem]">
+          <svg id="Capa_1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1080" className="w-[170px] h-[170px] md:w-[320px] md:h-[320px]" style={{ display: 'block' }}>
             <defs>
               <style>{`.st0{fill:#05ed96}`}</style>
             </defs>
@@ -37,12 +37,12 @@ export function Hero() {
 
         {/* Bottom two-column layout */}
         <div
-          className="grid md:grid-cols-[1.4fr_1fr] gap-20 items-end opacity-0"
+          className="grid md:grid-cols-[1.4fr_1fr] gap-10 md:gap-20 items-end opacity-0"
           style={{ animation: 'fadeUp 1s ease forwards 0.4s' }}
         >
           {/* Left: headline */}
           <div>
-            <h1 className="font-[family-name:var(--font-unbounded)] uppercase tracking-[0.015em] text-[#f4f1e8]" style={{ fontSize: 'clamp(2.8rem,6vw,7rem)', lineHeight: 1.1 }}>
+            <h1 className="font-[family-name:var(--font-unbounded)] uppercase tracking-[0.015em] text-[#f4f1e8]" style={{ fontSize: 'clamp(2.2rem,9vw,7rem)', lineHeight: 1.1 }}>
               <span
                 className="block font-[family-name:var(--font-instrument-serif)] not-italic"
                 style={{ fontSize: '0.52em', lineHeight: 1.1, color: 'rgba(244,241,232,0.85)', textTransform: 'none', letterSpacing: 0 }}
@@ -58,24 +58,24 @@ export function Hero() {
             <span className="block font-[family-name:var(--font-unbounded)] text-[0.85rem] tracking-[0.1em] uppercase text-[#05ed96] mb-3">
               YENDO
             </span>
-            <p className="font-[family-name:var(--font-instrument-serif)] italic text-[1.2rem] text-[#f4f1e8] leading-[1.5] mb-5 max-w-[400px]">
+            <p className="font-[family-name:var(--font-instrument-serif)] italic text-[1.1rem] md:text-[1.2rem] text-[#f4f1e8] leading-[1.5] mb-4 md:mb-5 max-w-[400px]">
               Una lata no es basura si nos hacemos cargo.
             </p>
-            <p className="text-[1.1rem] text-[rgba(244,241,232,0.65)] leading-[1.65] mb-8 max-w-[400px] font-[family-name:var(--font-instrument-serif)]">
+            <p className="text-[1rem] md:text-[1.1rem] text-[rgba(244,241,232,0.65)] leading-[1.65] mb-7 md:mb-8 max-w-[400px] font-[family-name:var(--font-instrument-serif)]">
               Una ecoetiqueta QR que conecta cada envase con su punto limpio más cercano.{' '}
               <strong className="text-[#f4f1e8] font-normal">Sin apps. Sin registro. Sin traba.</strong>{' '}
               Solo escaneas y tienes la ruta.
             </p>
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3">
               <Link
                 href="/suscripcion"
-                className="inline-flex items-center gap-2 bg-[#05ed96] text-[#080808] px-7 py-3.5 rounded-full font-[family-name:var(--font-unbounded)] text-[0.72rem] tracking-[0.06em] uppercase no-underline hover:bg-[#04c97e] hover:-translate-y-px transition-all"
+                className="inline-flex items-center justify-center sm:justify-start gap-2 bg-[#05ed96] text-[#080808] px-6 sm:px-7 py-4 sm:py-3.5 rounded-full font-[family-name:var(--font-unbounded)] text-[0.72rem] tracking-[0.06em] uppercase no-underline hover:bg-[#04c97e] hover:-translate-y-px active:scale-[0.98] transition-all"
               >
                 Reciclemos →
               </Link>
               <Link
                 href="/mapa"
-                className="inline-flex items-center gap-2 bg-transparent text-[rgba(244,241,232,0.5)] px-7 py-3.5 rounded-full border border-[rgba(244,241,232,0.12)] font-[family-name:var(--font-unbounded)] text-[0.72rem] tracking-[0.06em] uppercase no-underline hover:border-[#05ed96] hover:text-[#05ed96] transition-all"
+                className="inline-flex items-center justify-center sm:justify-start gap-2 bg-transparent text-[rgba(244,241,232,0.6)] px-6 sm:px-7 py-4 sm:py-3.5 rounded-full border border-[rgba(244,241,232,0.14)] font-[family-name:var(--font-unbounded)] text-[0.72rem] tracking-[0.06em] uppercase no-underline hover:border-[#05ed96] hover:text-[#05ed96] active:scale-[0.98] transition-all"
               >
                 ¿Dónde reciclo?
               </Link>

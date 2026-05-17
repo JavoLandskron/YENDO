@@ -81,22 +81,22 @@ export function PrecioSection() {
   const expiry = expiryDate.toLocaleDateString('es-CL', { day: 'numeric', month: 'long', year: 'numeric' })
 
   return (
-    <section className="py-24 px-10 bg-[#1c1c1c] border-t border-[rgba(5,237,150,0.08)]" id="pago">
+    <section className="py-16 md:py-24 px-5 sm:px-8 md:px-10 bg-[#1c1c1c] border-t border-[rgba(5,237,150,0.08)]" id="pago">
       <div className="max-w-[960px] mx-auto">
-        <span className="block font-[family-name:var(--font-instrument-serif)] italic text-[#05ed96] text-[1rem] mb-4 reveal">
+        <span className="block font-[family-name:var(--font-instrument-serif)] italic text-[#05ed96] text-[0.95rem] md:text-[1rem] mb-4 reveal">
           Comunidad
         </span>
         <h2
-          className="font-[family-name:var(--font-unbounded)] uppercase tracking-[0.01em] mb-10 reveal"
-          style={{ fontSize: 'clamp(1.4rem,2.2vw,2.4rem)', lineHeight: 1.15 }}
+          className="font-[family-name:var(--font-unbounded)] uppercase tracking-[0.01em] mb-8 md:mb-10 reveal"
+          style={{ fontSize: 'clamp(1.6rem,6vw,2.4rem)', lineHeight: 1.15 }}
         >
           Un precio.<br />Todo incluido.
         </h2>
 
-        <div className="grid md:grid-cols-2 gap-8">
+        <div className="grid md:grid-cols-2 gap-6 md:gap-8">
           {/* Price card */}
           <div
-            className="bg-[#080808] border border-[rgba(5,237,150,0.2)] rounded-[20px] p-10 relative overflow-hidden reveal"
+            className="bg-[#080808] border border-[rgba(5,237,150,0.2)] rounded-[20px] p-6 sm:p-10 relative overflow-hidden reveal"
           >
             <div
               className="absolute top-0 left-0 right-0 h-0.5"
@@ -137,7 +137,7 @@ export function PrecioSection() {
           </div>
 
           {/* Form */}
-          <div className="bg-[#2a2a2a] border border-[rgba(245,242,235,0.06)] rounded-[24px] p-8 reveal">
+          <div className="bg-[#2a2a2a] border border-[rgba(245,242,235,0.06)] rounded-[24px] p-6 sm:p-8 reveal">
             <div className="font-[family-name:var(--font-dm-sans)] text-[0.8rem] tracking-[0.05em] uppercase text-[rgba(245,242,235,0.4)] mb-6">
               Datos de tu marca
             </div>

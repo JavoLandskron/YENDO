@@ -2,7 +2,7 @@ import Link from 'next/link'
 
 export function CtaFinal() {
   return (
-    <section className="py-32 px-10 text-center bg-[#1c1c1c] border-t border-[rgba(5,237,150,0.08)] relative overflow-hidden">
+    <section className="py-20 md:py-32 px-5 sm:px-8 md:px-10 text-center bg-[#1c1c1c] border-t border-[rgba(5,237,150,0.08)] relative overflow-hidden">
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
@@ -12,8 +12,8 @@ export function CtaFinal() {
       />
       <div className="relative z-10">
         <h2
-          className="font-[family-name:var(--font-unbounded)] uppercase tracking-[0.01em] mb-6 reveal"
-          style={{ fontSize: 'clamp(3rem,7vw,7rem)', lineHeight: 1.15 }}
+          className="font-[family-name:var(--font-unbounded)] uppercase tracking-[0.01em] mb-5 md:mb-6 reveal"
+          style={{ fontSize: 'clamp(2.2rem,11vw,7rem)', lineHeight: 1.1 }}
         >
           TÓMALA <span style={{ color: '#05ed96' }}>FRÍA.</span>
           <br />
@@ -25,7 +25,7 @@ export function CtaFinal() {
         <div className="reveal">
           <Link
             href="#pago"
-            className="inline-flex items-center gap-2 bg-[#05ed96] text-[#080808] px-7 py-3.5 rounded-full font-[family-name:var(--font-unbounded)] text-[0.72rem] tracking-[0.06em] uppercase no-underline hover:bg-[#04c97e] hover:-translate-y-px transition-all"
+            className="inline-flex items-center gap-2 bg-[#05ed96] text-[#080808] px-6 sm:px-7 py-4 sm:py-3.5 rounded-full font-[family-name:var(--font-unbounded)] text-[0.7rem] sm:text-[0.72rem] tracking-[0.06em] uppercase no-underline hover:bg-[#04c97e] hover:-translate-y-px active:scale-[0.98] transition-all"
           >
             Integra YENDO — 3 UF anuales
           </Link>

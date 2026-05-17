@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import type { Point } from '@/lib/types'
 import { PointCard } from './PointCard'
 
@@ -42,10 +42,6 @@ export function Sidebar({
 }: SidebarProps) {
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
 
-  useEffect(() => {
-    setVisibleCount(PAGE_SIZE)
-  }, [points])
-
   const shown = points.slice(0, visibleCount)
   const remaining = points.length - visibleCount
 
@@ -55,25 +51,40 @@ export function Sidebar({
         // ── Base (mobile: bottom sheet) ──────────────────────────
         'absolute bottom-0 left-0 right-0 z-[200]',
         'bg-[#1c1c1c] rounded-t-3xl',
-        'overflow-hidden',
+        'overflow-hidden flex flex-col',
+        'border-t border-[rgba(5,237,150,0.18)]',
+        'shadow-[0_-12px_32px_rgba(0,0,0,0.45)]',
         'transition-[height] duration-300 ease-in-out',
-        sheetOpen ? 'h-[72dvh]' : 'h-[172px]',
+        sheetOpen ? 'h-[72dvh]' : 'h-[116px]',
 
         // ── Desktop override (md+): left panel ───────────────────
         'md:static md:h-auto md:w-[360px] md:rounded-none md:z-10',
-        'md:border-r md:border-[rgba(5,237,150,0.08)]',
-        'md:flex md:flex-col',
+        'md:border-t-0 md:border-r md:border-[rgba(5,237,150,0.08)]',
+        'md:shadow-none',
       ].join(' ')}
     >
       {/* ── Mobile handle (tap to expand/collapse) ─── */}
       <button
         onClick={onSheetToggle}
         aria-label={sheetOpen ? 'Colapsar lista' : 'Expandir lista'}
-        className="md:hidden w-full flex flex-col items-center pt-3 pb-1 cursor-pointer bg-transparent border-0 active:bg-[rgba(5,237,150,0.04)] transition-colors"
+        className="md:hidden shrink-0 w-full flex flex-col items-center pt-2.5 pb-2 cursor-pointer bg-transparent border-0 active:bg-[rgba(5,237,150,0.04)] transition-colors"
       >
-        <div className="w-8 h-1 rounded-full bg-[rgba(245,242,235,0.2)]" />
-        <span className="mt-1.5 font-[family-name:var(--font-dm-sans)] text-[0.65rem] tracking-[0.1em] uppercase text-[rgba(245,242,235,0.3)]">
-          {sheetOpen ? 'Cerrar' : `${total} puntos`}
+        <div
+          className={`h-1 rounded-full bg-[rgba(245,242,235,0.25)] transition-all duration-300 ${
+            sheetOpen ? 'w-12' : 'w-10'
+          }`}
+        />
+        <span className="mt-1.5 font-[family-name:var(--font-dm-sans)] text-[0.65rem] tracking-[0.14em] uppercase text-[rgba(245,242,235,0.45)] flex items-center gap-1.5">
+          {sheetOpen ? (
+            <>
+              <span className="text-[#05ed96]">▾</span> Cerrar
+            </>
+          ) : (
+            <>
+              <span className="text-[#05ed96] font-medium">{total}</span> puntos
+              <span className="text-[rgba(5,237,150,0.6)]">▴</span>
+            </>
+          )}
         </span>
       </button>
 
@@ -106,7 +117,12 @@ export function Sidebar({
       </div>
 
       {/* ── Stats + Locate (desktop only; mobile has floating button) ── */}
-      <div className="px-5 py-2.5 border-b border-[rgba(245,242,235,0.04)] flex items-center justify-between shrink-0">
+      <div
+        className={[
+          'px-5 py-2.5 border-b border-[rgba(245,242,235,0.04)] items-center justify-between shrink-0',
+          sheetOpen ? 'flex' : 'hidden md:flex',
+        ].join(' ')}
+      >
         <span className="font-[family-name:var(--font-dm-sans)] text-[0.78rem] text-[rgba(245,242,235,0.35)]">
           <span className="text-[#05ed96] font-medium">{shown.length}</span> de {total} puntos
         </span>
@@ -124,7 +140,10 @@ export function Sidebar({
 
       {/* ── Points list ─────────────────────────────── */}
       <div
-        className="flex-1 overflow-y-auto"
+        className={[
+          'flex-1 overflow-y-auto',
+          sheetOpen ? 'block' : 'hidden md:block',
+        ].join(' ')}
         style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(5,237,150,0.2) transparent' }}
       >
         {shown.length === 0 ? (

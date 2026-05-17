@@ -1,7 +1,7 @@
 'use client'
 
 import 'leaflet/dist/leaflet.css'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Point } from '@/lib/types'
 import { formatDistance, MAT_SHORT, POINT_TYPE_LABELS } from '@/lib/map-utils'
 
@@ -13,15 +13,38 @@ interface MapViewProps {
 }
 
 type CircleMarker = import('leaflet').CircleMarker
+type CircleMarkerOptions = import('leaflet').CircleMarkerOptions
+type LatLngBounds = import('leaflet').LatLngBounds
 type Marker      = import('leaflet').Marker
+type Renderer = import('leaflet').Renderer
+type LeafletContainer = HTMLDivElement & { _leaflet_id?: number }
 
 export function MapView({ points, selectedIdx, onSelect, userLocation }: MapViewProps) {
   const mapRef       = useRef<HTMLDivElement>(null)
   const leafletMap   = useRef<import('leaflet').Map | null>(null)
-  const markersRef   = useRef<CircleMarker[]>([])
+  const markersRef   = useRef<Map<number, CircleMarker>>(new Map())
   const pinMarkerRef = useRef<Marker | null>(null)           // divIcon para el seleccionado
   const userMarkerRef = useRef<import('leaflet').CircleMarker | null>(null)
+  const markerRendererRef = useRef<Renderer | null>(null)
+  const [renderBounds, setRenderBounds] = useState<LatLngBounds | null>(null)
   const [mapReady, setMapReady] = useState(false)
+
+  const renderedPoints = useMemo(() => {
+    const indexedPoints = points.map((point, idx) => ({ point, idx }))
+    const visiblePoints = renderBounds
+      ? indexedPoints.filter(({ point }) => renderBounds.contains([point.lat, point.lng]))
+      : indexedPoints
+
+    if (
+      selectedIdx !== null &&
+      points[selectedIdx] &&
+      !visiblePoints.some(({ idx }) => idx === selectedIdx)
+    ) {
+      return [...visiblePoints, { point: points[selectedIdx], idx: selectedIdx }]
+    }
+
+    return visiblePoints
+  }, [points, renderBounds, selectedIdx])
 
   // Init map
   useEffect(() => {
@@ -33,15 +56,22 @@ export function MapView({ points, selectedIdx, onSelect, userLocation }: MapView
     import('leaflet').then((L) => {
       if (cancelled) return
 
-      if ((container as any)._leaflet_id) {
-        delete (container as any)._leaflet_id
+      const leafletContainer = container as LeafletContainer
+      if (leafletContainer._leaflet_id) {
+        delete leafletContainer._leaflet_id
       }
 
       const map = L.map(container, {
         center: [-33.45, -70.65],
         zoom: 11,
         zoomControl: false,
+        preferCanvas: true,
       })
+      markerRendererRef.current = L.canvas({ padding: 0.5 })
+
+      const updateRenderBounds = () => {
+        setRenderBounds(map.getBounds().pad(0.35))
+      }
 
       // Zoom controls top-right, leaving bottom clear for the sheet
       L.control.zoom({ position: 'topright' }).addTo(map)
@@ -63,8 +93,10 @@ export function MapView({ points, selectedIdx, onSelect, userLocation }: MapView
           m.setStyle({ opacity: 1, fillOpacity: 1 })
         )
       })
+      map.on('moveend zoomend resize', updateRenderBounds)
 
       leafletMap.current = map
+      updateRenderBounds()
       setMapReady(true)
     })
 
@@ -72,6 +104,7 @@ export function MapView({ points, selectedIdx, onSelect, userLocation }: MapView
       cancelled = true
       leafletMap.current?.remove()
       leafletMap.current = null
+      markerRendererRef.current = null
       setMapReady(false)
     }
   }, [])
@@ -87,11 +120,11 @@ export function MapView({ points, selectedIdx, onSelect, userLocation }: MapView
       if (cancelled || !leafletMap.current) return
 
       markersRef.current.forEach((m) => m.remove())
-      markersRef.current = []
+      markersRef.current = new Map()
 
-      const newMarkers: CircleMarker[] = []
+      const newMarkers = new Map<number, CircleMarker>()
 
-      points.forEach((point, idx) => {
+      renderedPoints.forEach(({ point, idx }) => {
         if (!leafletMap.current) return
 
         const hasMetals = point.m.includes('Metales')
@@ -105,14 +138,20 @@ export function MapView({ points, selectedIdx, onSelect, userLocation }: MapView
 
         const radius = hasMetals || isPuntoLimpio ? 5 : 3.5
 
-        const marker = L.circleMarker([point.lat, point.lng], {
+        const markerOptions: CircleMarkerOptions = {
           radius,
           fillColor: color,
           color: 'rgba(0,0,0,0.6)',
           weight: 1,
           fillOpacity: 1,
           opacity: 1,
-        })
+        }
+
+        if (markerRendererRef.current) {
+          markerOptions.renderer = markerRendererRef.current
+        }
+
+        const marker = L.circleMarker([point.lat, point.lng], markerOptions)
 
         const mats = point.m
           .map((m) => `<span style="font-size:0.65rem;padding:0.15rem 0.45rem;background:rgba(5,237,150,0.12);color:#05ed96;border-radius:3px;display:inline-block">${MAT_SHORT[m] || m}</span>`)
@@ -136,14 +175,14 @@ export function MapView({ points, selectedIdx, onSelect, userLocation }: MapView
 
         marker.on('click', () => onSelect(idx))
         marker.addTo(leafletMap.current)
-        newMarkers.push(marker)
+        newMarkers.set(idx, marker)
       })
 
       markersRef.current = newMarkers
     })
 
     return () => { cancelled = true }
-  }, [mapReady, points, onSelect])
+  }, [mapReady, renderedPoints, onSelect])
 
   // Pin seleccionado: divIcon con pulso + flyTo + popup
   useEffect(() => {
@@ -156,7 +195,7 @@ export function MapView({ points, selectedIdx, onSelect, userLocation }: MapView
     if (selectedIdx === null) return
 
     const point = points[selectedIdx]
-    const circleMarker = markersRef.current[selectedIdx]
+    const circleMarker = markersRef.current.get(selectedIdx)
     if (!point || !circleMarker) return
 
     const map = leafletMap.current

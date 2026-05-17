@@ -26,25 +26,25 @@ const KIT_ITEMS = [
 
 export function KitSection() {
   return (
-    <section className="py-24 px-10 bg-[#080808] border-t border-[rgba(245,242,235,0.04)]" id="kit">
+    <section className="py-16 md:py-24 px-5 sm:px-8 md:px-10 bg-[#080808] border-t border-[rgba(245,242,235,0.04)]" id="kit">
       <div className="max-w-[960px] mx-auto">
-        <span className="block font-[family-name:var(--font-instrument-serif)] italic text-[#05ed96] text-[1rem] mb-4 reveal">
+        <span className="block font-[family-name:var(--font-instrument-serif)] italic text-[#05ed96] text-[0.95rem] md:text-[1rem] mb-4 reveal">
           Kit descargable
         </span>
         <h2
           className="font-[family-name:var(--font-unbounded)] uppercase tracking-[0.01em] reveal"
-          style={{ fontSize: 'clamp(1.4rem,2.2vw,2.4rem)', lineHeight: 1.15 }}
+          style={{ fontSize: 'clamp(1.6rem,6vw,2.4rem)', lineHeight: 1.15 }}
         >
           Todo lo que necesitas<br />para activar el ciclo.
         </h2>
 
-        <div className="grid md:grid-cols-3 gap-6 mt-12">
+        <div className="grid md:grid-cols-3 gap-5 md:gap-6 mt-10 md:mt-12">
           {KIT_ITEMS.map((item) => (
             <div
               key={item.num}
-              className={`reveal ${item.delay} bg-[#1c1c1c] border border-[rgba(245,242,235,0.06)] rounded-[20px] p-8 hover:border-[rgba(5,237,150,0.15)] transition-colors`}
+              className={`reveal ${item.delay} bg-[#1c1c1c] border border-[rgba(245,242,235,0.06)] rounded-[20px] p-6 sm:p-8 hover:border-[rgba(5,237,150,0.15)] transition-colors`}
             >
-              <div className="font-[family-name:var(--font-unbounded)] text-[3.5rem] text-[rgba(5,237,150,0.15)] leading-[1.15] mb-5 tracking-[0.02em]">
+              <div className="font-[family-name:var(--font-unbounded)] text-[2.75rem] sm:text-[3.5rem] text-[rgba(5,237,150,0.15)] leading-[1.15] mb-4 sm:mb-5 tracking-[0.02em]">
                 {item.num}
               </div>
               <div className="font-[family-name:var(--font-instrument-serif)] italic text-[1.15rem] text-[#f5f2eb] mb-2">

@@ -8,15 +8,15 @@ const BENEFICIOS = [
 
 export function ComunidadSection() {
   return (
-    <section className="py-24 px-10 bg-[#1c1c1c] border-t border-[rgba(5,237,150,0.08)]">
-      <div className="max-w-[960px] mx-auto grid md:grid-cols-2 gap-24 items-center">
+    <section className="py-16 md:py-24 px-5 sm:px-8 md:px-10 bg-[#1c1c1c] border-t border-[rgba(5,237,150,0.08)]">
+      <div className="max-w-[960px] mx-auto grid md:grid-cols-2 gap-10 md:gap-24 items-start md:items-center">
         <div className="reveal">
-          <span className="block font-[family-name:var(--font-instrument-serif)] italic text-[#05ed96] text-[1rem] mb-4">
+          <span className="block font-[family-name:var(--font-instrument-serif)] italic text-[#05ed96] text-[0.95rem] md:text-[1rem] mb-4">
             Comunidad
           </span>
           <h2
             className="font-[family-name:var(--font-unbounded)] uppercase tracking-[0.01em]"
-            style={{ fontSize: 'clamp(1.4rem,2.2vw,2.4rem)', lineHeight: 1.15 }}
+            style={{ fontSize: 'clamp(1.6rem,6vw,2.4rem)', lineHeight: 1.15 }}
           >
             Marcas que<br />cierran el<br />ciclo.
           </h2>

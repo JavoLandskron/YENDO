@@ -33,14 +33,14 @@ export function FaqSection() {
   const [openIdx, setOpenIdx] = useState<number | null>(null)
 
   return (
-    <section className="py-20 px-10 bg-[#080808] border-t border-[rgba(245,242,235,0.04)]">
+    <section className="py-14 md:py-20 px-5 sm:px-8 md:px-10 bg-[#080808] border-t border-[rgba(245,242,235,0.04)]">
       <div className="max-w-[680px] mx-auto">
-        <span className="block font-[family-name:var(--font-instrument-serif)] italic text-[#05ed96] text-[1rem] mb-4 reveal">
+        <span className="block font-[family-name:var(--font-instrument-serif)] italic text-[#05ed96] text-[0.95rem] md:text-[1rem] mb-4 reveal">
           Preguntas frecuentes
         </span>
         <h2
-          className="font-[family-name:var(--font-unbounded)] uppercase tracking-[0.01em] mb-10 reveal"
-          style={{ fontSize: 'clamp(1.4rem,2.2vw,2.4rem)', lineHeight: 1.15 }}
+          className="font-[family-name:var(--font-unbounded)] uppercase tracking-[0.01em] mb-8 md:mb-10 reveal"
+          style={{ fontSize: 'clamp(1.6rem,6vw,2.4rem)', lineHeight: 1.15 }}
         >
           Todo claro<br />antes de pagar.
         </h2>
