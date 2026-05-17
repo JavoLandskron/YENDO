@@ -38,9 +38,12 @@ export function MapView({ points, selectedIdx, onSelect, userLocation }: MapView
       const map = L.map(container, {
         center: [-33.45, -70.65],
         zoom: 11,
-        zoomControl: true,
-        preferCanvas: true, // render everything on canvas — much faster
+        zoomControl: false,
+        preferCanvas: true,
       })
+
+      // Zoom controls top-right, leaving bottom clear for the sheet
+      L.control.zoom({ position: 'topright' }).addTo(map)
 
       L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
         attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://carto.com/attributions">CARTO</a>',
@@ -60,12 +63,11 @@ export function MapView({ points, selectedIdx, onSelect, userLocation }: MapView
     }
   }, [])
 
-  // Render all markers using circleMarker (canvas, no DOM nodes per marker)
+  // Render markers
   useEffect(() => {
     if (!mapReady || !leafletMap.current) return
 
     import('leaflet').then((L) => {
-      // Remove previous markers
       markersRef.current.forEach((m) => m.remove())
       markersRef.current = []
 
@@ -75,13 +77,13 @@ export function MapView({ points, selectedIdx, onSelect, userLocation }: MapView
         const hasMetals = point.m.includes('Metales')
         const isPuntoLimpio = point.t === 'PUNTO_LIMPIO'
 
-        const color = (hasMetals || isPuntoLimpio)
+        const color = hasMetals || isPuntoLimpio
           ? '#05ed96'
           : point.t === 'PUNTO_VERDE'
           ? '#5ba8e8'
           : '#888'
 
-        const radius = (hasMetals || isPuntoLimpio) ? 5 : 3.5
+        const radius = hasMetals || isPuntoLimpio ? 5 : 3.5
 
         const marker = L.circleMarker([point.lat, point.lng], {
           radius,
@@ -152,7 +154,5 @@ export function MapView({ points, selectedIdx, onSelect, userLocation }: MapView
     })
   }, [userLocation, mapReady])
 
-  return (
-    <div ref={mapRef} className="flex-1 min-h-0" style={{ background: '#080808' }} />
-  )
+  return <div ref={mapRef} className="w-full h-full" style={{ background: '#080808' }} />
 }
