@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import type { Point } from '@/lib/types'
@@ -75,11 +75,12 @@ export function MapApp() {
     setSelectedIdx(null)
   }
 
-  // Al seleccionar un punto en móvil, cierra el sheet para ver el mapa
-  function handleSelect(idx: number) {
+  // useCallback evita que handleSelect cambie de referencia en cada render,
+  // lo que causaba que los markers se re-crearan y el popup se perdiera.
+  const handleSelect = useCallback((idx: number) => {
     setSelectedIdx(idx)
     setSheetOpen(false)
-  }
+  }, [])
 
   function handleLocate() {
     if (!navigator.geolocation) {

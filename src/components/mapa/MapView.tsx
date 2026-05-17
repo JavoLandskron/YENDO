@@ -13,11 +13,13 @@ interface MapViewProps {
 }
 
 type CircleMarker = import('leaflet').CircleMarker
+type Marker      = import('leaflet').Marker
 
 export function MapView({ points, selectedIdx, onSelect, userLocation }: MapViewProps) {
-  const mapRef = useRef<HTMLDivElement>(null)
-  const leafletMap = useRef<import('leaflet').Map | null>(null)
-  const markersRef = useRef<CircleMarker[]>([])
+  const mapRef       = useRef<HTMLDivElement>(null)
+  const leafletMap   = useRef<import('leaflet').Map | null>(null)
+  const markersRef   = useRef<CircleMarker[]>([])
+  const pinMarkerRef = useRef<Marker | null>(null)           // divIcon para el seleccionado
   const userMarkerRef = useRef<import('leaflet').CircleMarker | null>(null)
   const [mapReady, setMapReady] = useState(false)
 
@@ -39,7 +41,6 @@ export function MapView({ points, selectedIdx, onSelect, userLocation }: MapView
         center: [-33.45, -70.65],
         zoom: 11,
         zoomControl: false,
-        preferCanvas: true,
       })
 
       // Zoom controls top-right, leaving bottom clear for the sheet
@@ -50,6 +51,18 @@ export function MapView({ points, selectedIdx, onSelect, userLocation }: MapView
         subdomains: 'abcd',
         maxZoom: 19,
       }).addTo(map)
+
+      // Oculta los markers durante el zoom para evitar el artefacto de escala
+      map.on('zoomstart', () => {
+        markersRef.current.forEach((m) =>
+          m.setStyle({ opacity: 0, fillOpacity: 0 })
+        )
+      })
+      map.on('zoomend', () => {
+        markersRef.current.forEach((m) =>
+          m.setStyle({ opacity: 1, fillOpacity: 1 })
+        )
+      })
 
       leafletMap.current = map
       setMapReady(true)
@@ -67,13 +80,20 @@ export function MapView({ points, selectedIdx, onSelect, userLocation }: MapView
   useEffect(() => {
     if (!mapReady || !leafletMap.current) return
 
+    let cancelled = false
+
     import('leaflet').then((L) => {
+      // El mapa pudo haber sido destruido mientras el import resolvía
+      if (cancelled || !leafletMap.current) return
+
       markersRef.current.forEach((m) => m.remove())
       markersRef.current = []
 
       const newMarkers: CircleMarker[] = []
 
       points.forEach((point, idx) => {
+        if (!leafletMap.current) return
+
         const hasMetals = point.m.includes('Metales')
         const isPuntoLimpio = point.t === 'PUNTO_LIMPIO'
 
@@ -115,28 +135,61 @@ export function MapView({ points, selectedIdx, onSelect, userLocation }: MapView
         )
 
         marker.on('click', () => onSelect(idx))
-        marker.addTo(leafletMap.current!)
+        marker.addTo(leafletMap.current)
         newMarkers.push(marker)
       })
 
       markersRef.current = newMarkers
     })
+
+    return () => { cancelled = true }
   }, [mapReady, points, onSelect])
 
-  // Pan to selected
+  // Pin seleccionado: divIcon con pulso + flyTo + popup
   useEffect(() => {
-    if (!mapReady || !leafletMap.current || selectedIdx === null) return
+    if (!mapReady || !leafletMap.current) return
+
+    // Elimina el pin anterior
+    pinMarkerRef.current?.remove()
+    pinMarkerRef.current = null
+
+    if (selectedIdx === null) return
+
     const point = points[selectedIdx]
-    if (!point) return
-    leafletMap.current.flyTo([point.lat, point.lng], 15, { duration: 0.8 })
-    markersRef.current[selectedIdx]?.openPopup()
+    const circleMarker = markersRef.current[selectedIdx]
+    if (!point || !circleMarker) return
+
+    const map = leafletMap.current
+
+    import('leaflet').then((L) => {
+      if (!leafletMap.current) return
+
+      // Pin verde animado (divIcon) encima del circleMarker
+      const icon = L.divIcon({
+        html: '<div class="yendo-pin"></div>',
+        className: '',
+        iconSize: [18, 18],
+        iconAnchor: [9, 9],
+      })
+
+      pinMarkerRef.current = L.marker([point.lat, point.lng], { icon, zIndexOffset: 1000 })
+        .addTo(map)
+
+      // Abre el popup del circleMarker (ya tiene bindPopup)
+      circleMarker.openPopup()
+      map.flyTo([point.lat, point.lng], 17, { duration: 1 })
+    })
   }, [selectedIdx, points, mapReady])
 
   // User location marker
   useEffect(() => {
     if (!mapReady || !leafletMap.current || !userLocation) return
 
+    let cancelled = false
+
     import('leaflet').then((L) => {
+      if (cancelled || !leafletMap.current) return
+
       userMarkerRef.current?.remove()
 
       userMarkerRef.current = L.circleMarker([userLocation.lat, userLocation.lng], {
@@ -147,11 +200,13 @@ export function MapView({ points, selectedIdx, onSelect, userLocation }: MapView
         fillOpacity: 1,
         opacity: 1,
       })
-        .addTo(leafletMap.current!)
+        .addTo(leafletMap.current)
         .bindPopup('<div style="color:#f5f2eb;font-size:0.82rem;font-family:sans-serif">Tu ubicación</div>')
 
-      leafletMap.current!.flyTo([userLocation.lat, userLocation.lng], 14, { duration: 1 })
+      leafletMap.current.flyTo([userLocation.lat, userLocation.lng], 14, { duration: 1 })
     })
+
+    return () => { cancelled = true }
   }, [userLocation, mapReady])
 
   return <div ref={mapRef} className="w-full h-full" style={{ background: '#080808' }} />
