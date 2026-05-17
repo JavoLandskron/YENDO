@@ -19,6 +19,24 @@ type Marker      = import('leaflet').Marker
 type Renderer = import('leaflet').Renderer
 type LeafletContainer = HTMLDivElement & { _leaflet_id?: number }
 
+function buildPopupHtml(point: Point): string {
+  const mats = point.m
+    .map((m) => `<span style="font-size:0.65rem;padding:0.15rem 0.45rem;background:rgba(5,237,150,0.12);color:#05ed96;border-radius:3px;display:inline-block">${MAT_SHORT[m] || m}</span>`)
+    .join(' ')
+  const dStr = point._d != null
+    ? `<div style="font-size:0.7rem;color:#05ed96;margin-bottom:0.4rem">${formatDistance(point._d)} de ti</div>`
+    : ''
+  const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${point.lat},${point.lng}`
+  return `<div style="font-family:sans-serif">
+    ${dStr}
+    <div style="font-size:0.85rem;font-weight:500;color:#f5f2eb;margin-bottom:0.4rem;line-height:1.4">${point.n || point.a}</div>
+    <div style="font-size:0.7rem;color:rgba(245,242,235,0.4);margin-bottom:0.4rem">${POINT_TYPE_LABELS[point.t]}</div>
+    <div style="display:flex;flex-wrap:wrap;gap:0.3rem;margin-bottom:0.5rem">${mats}</div>
+    ${point.h ? `<div style="font-size:0.72rem;color:rgba(245,242,235,0.4);margin-bottom:0.6rem;line-height:1.4">${point.h}</div>` : ''}
+    <a href="${mapsUrl}" target="_blank" style="display:block;width:100%;text-align:center;background:#05ed96;color:#080808;border-radius:12px;padding:0.45rem 1rem;font-size:0.78rem;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;text-decoration:none">→ Cómo llegar</a>
+  </div>`
+}
+
 export function MapView({ points, selectedIdx, onSelect, userLocation }: MapViewProps) {
   const mapRef       = useRef<HTMLDivElement>(null)
   const leafletMap   = useRef<import('leaflet').Map | null>(null)
@@ -29,22 +47,16 @@ export function MapView({ points, selectedIdx, onSelect, userLocation }: MapView
   const [renderBounds, setRenderBounds] = useState<LatLngBounds | null>(null)
   const [mapReady, setMapReady] = useState(false)
 
+  // No depender de selectedIdx: el pin marker (creado en el effect de selección)
+  // lleva el popup y siempre se renderiza, esté o no su circleMarker en bounds.
+  // Incluirlo acá causaba re-render completo de markers en cada selección,
+  // lo que cerraba el popup recién abierto.
   const renderedPoints = useMemo(() => {
     const indexedPoints = points.map((point, idx) => ({ point, idx }))
-    const visiblePoints = renderBounds
+    return renderBounds
       ? indexedPoints.filter(({ point }) => renderBounds.contains([point.lat, point.lng]))
       : indexedPoints
-
-    if (
-      selectedIdx !== null &&
-      points[selectedIdx] &&
-      !visiblePoints.some(({ idx }) => idx === selectedIdx)
-    ) {
-      return [...visiblePoints, { point: points[selectedIdx], idx: selectedIdx }]
-    }
-
-    return visiblePoints
-  }, [points, renderBounds, selectedIdx])
+  }, [points, renderBounds])
 
   // Init map
   useEffect(() => {
@@ -153,26 +165,8 @@ export function MapView({ points, selectedIdx, onSelect, userLocation }: MapView
 
         const marker = L.circleMarker([point.lat, point.lng], markerOptions)
 
-        const mats = point.m
-          .map((m) => `<span style="font-size:0.65rem;padding:0.15rem 0.45rem;background:rgba(5,237,150,0.12);color:#05ed96;border-radius:3px;display:inline-block">${MAT_SHORT[m] || m}</span>`)
-          .join(' ')
-        const dStr = point._d != null
-          ? `<div style="font-size:0.7rem;color:#05ed96;margin-bottom:0.4rem">${formatDistance(point._d)} de ti</div>`
-          : ''
-        const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${point.lat},${point.lng}`
-
-        marker.bindPopup(
-          `<div style="font-family:sans-serif">
-            ${dStr}
-            <div style="font-size:0.85rem;font-weight:500;color:#f5f2eb;margin-bottom:0.4rem;line-height:1.4">${point.n || point.a}</div>
-            <div style="font-size:0.7rem;color:rgba(245,242,235,0.4);margin-bottom:0.4rem">${POINT_TYPE_LABELS[point.t]}</div>
-            <div style="display:flex;flex-wrap:wrap;gap:0.3rem;margin-bottom:0.5rem">${mats}</div>
-            ${point.h ? `<div style="font-size:0.72rem;color:rgba(245,242,235,0.4);margin-bottom:0.6rem;line-height:1.4">${point.h}</div>` : ''}
-            <a href="${mapsUrl}" target="_blank" style="display:block;width:100%;text-align:center;background:#05ed96;color:#080808;border-radius:12px;padding:0.45rem 1rem;font-size:0.78rem;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;text-decoration:none">→ Cómo llegar</a>
-          </div>`,
-          { closeButton: false, maxWidth: 260 }
-        )
-
+        // El popup vive en el pin marker (effect de selección). Acá solo
+        // delegamos el click para que el selection effect cree pin + popup.
         marker.on('click', () => onSelect(idx))
         marker.addTo(leafletMap.current)
         newMarkers.set(idx, marker)
@@ -184,26 +178,26 @@ export function MapView({ points, selectedIdx, onSelect, userLocation }: MapView
     return () => { cancelled = true }
   }, [mapReady, renderedPoints, onSelect])
 
-  // Pin seleccionado: divIcon con pulso + flyTo + popup
+  // Pin seleccionado: divIcon con pulso + popup + flyTo.
+  // El popup se liga al pin marker (no al circleMarker) para que sobreviva
+  // a los re-renders de markers que ocurren al cambiar bounds del mapa.
   useEffect(() => {
     if (!mapReady || !leafletMap.current) return
 
-    // Elimina el pin anterior
+    // Elimina el pin anterior (esto cierra su popup también)
     pinMarkerRef.current?.remove()
     pinMarkerRef.current = null
 
     if (selectedIdx === null) return
 
     const point = points[selectedIdx]
-    const circleMarker = markersRef.current.get(selectedIdx)
-    if (!point || !circleMarker) return
+    if (!point) return
 
     const map = leafletMap.current
 
     import('leaflet').then((L) => {
       if (!leafletMap.current) return
 
-      // Pin verde animado (divIcon) encima del circleMarker
       const icon = L.divIcon({
         html: '<div class="yendo-pin"></div>',
         className: '',
@@ -211,11 +205,12 @@ export function MapView({ points, selectedIdx, onSelect, userLocation }: MapView
         iconAnchor: [9, 9],
       })
 
-      pinMarkerRef.current = L.marker([point.lat, point.lng], { icon, zIndexOffset: 1000 })
+      const pin = L.marker([point.lat, point.lng], { icon, zIndexOffset: 1000 })
+        .bindPopup(buildPopupHtml(point), { closeButton: false, maxWidth: 260 })
         .addTo(map)
 
-      // Abre el popup del circleMarker (ya tiene bindPopup)
-      circleMarker.openPopup()
+      pinMarkerRef.current = pin
+      pin.openPopup()
       map.flyTo([point.lat, point.lng], 17, { duration: 1 })
     })
   }, [selectedIdx, points, mapReady])

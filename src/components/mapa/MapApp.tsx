@@ -35,6 +35,82 @@ function useDebouncedValue<T>(value: T, delay: number) {
   return debounced
 }
 
+function useMobileDocumentScrollLock() {
+  useEffect(() => {
+    const query = window.matchMedia('(max-width: 767px)')
+    const root = document.documentElement
+    const body = document.body
+    const previous = {
+      rootOverflow: root.style.overflow,
+      rootHeight: root.style.height,
+      rootOverscrollBehavior: root.style.overscrollBehavior,
+      bodyOverflow: body.style.overflow,
+      bodyHeight: body.style.height,
+      bodyPosition: body.style.position,
+      bodyTop: body.style.top,
+      bodyLeft: body.style.left,
+      bodyRight: body.style.right,
+      bodyWidth: body.style.width,
+      bodyOverscrollBehavior: body.style.overscrollBehavior,
+    }
+    let locked = false
+    let scrollY = 0
+
+    const lock = () => {
+      if (locked) return
+      locked = true
+      scrollY = window.scrollY
+
+      root.style.overflow = 'hidden'
+      root.style.height = '100%'
+      root.style.overscrollBehavior = 'none'
+      body.style.overflow = 'hidden'
+      body.style.height = '100%'
+      body.style.position = 'fixed'
+      body.style.top = `-${scrollY}px`
+      body.style.left = '0'
+      body.style.right = '0'
+      body.style.width = '100%'
+      body.style.overscrollBehavior = 'none'
+    }
+
+    const unlock = () => {
+      if (!locked) return
+      locked = false
+
+      root.style.overflow = previous.rootOverflow
+      root.style.height = previous.rootHeight
+      root.style.overscrollBehavior = previous.rootOverscrollBehavior
+      body.style.overflow = previous.bodyOverflow
+      body.style.height = previous.bodyHeight
+      body.style.position = previous.bodyPosition
+      body.style.top = previous.bodyTop
+      body.style.left = previous.bodyLeft
+      body.style.right = previous.bodyRight
+      body.style.width = previous.bodyWidth
+      body.style.overscrollBehavior = previous.bodyOverscrollBehavior
+      window.scrollTo(0, scrollY)
+    }
+
+    const syncLock = () => {
+      if (query.matches) {
+        lock()
+        return
+      }
+
+      unlock()
+    }
+
+    syncLock()
+    query.addEventListener('change', syncLock)
+
+    return () => {
+      query.removeEventListener('change', syncLock)
+      unlock()
+    }
+  }, [])
+}
+
 export function MapApp() {
   const [allPoints, setAllPoints] = useState<Point[]>([])
   const [pointsLoading, setPointsLoading] = useState(true)
@@ -46,6 +122,8 @@ export function MapApp() {
   const [sheetOpen, setSheetOpen] = useState(false)
   const notificationTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const debouncedSearch = useDebouncedValue(search.trim(), SEARCH_DEBOUNCE_MS)
+
+  useMobileDocumentScrollLock()
 
   const showNotif = useCallback((msg: string) => {
     if (notificationTimer.current) {
@@ -149,7 +227,7 @@ export function MapApp() {
   }
 
   return (
-    <div className="h-[100dvh] flex flex-col overflow-hidden">
+    <div className="fixed inset-0 h-[100dvh] w-full flex flex-col overflow-hidden overscroll-none md:relative">
 
       {/* ── Header ───────────────────────────────────────── */}
       <header className="shrink-0 relative flex items-center px-4 md:px-6 py-2.5 md:py-3.5 bg-[#080808] border-b border-[rgba(5,237,150,0.12)] z-[1000]">
