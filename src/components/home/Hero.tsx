@@ -16,7 +16,7 @@ export function Hero() {
 
       <div className="relative z-10 flex flex-col gap-0 flex-1 justify-end">
         {/* Large logo mark */}
-        <div className="reveal mt-auto mb-[-1rem] md:mb-[-1.5rem]">
+        <div className="reveal mt-auto -translate-y-3 md:translate-y-0 mb-[-1rem] md:mb-[-1.5rem]">
           <svg id="Capa_1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1080" className="w-[170px] h-[170px] md:w-[320px] md:h-[320px]" style={{ display: 'block' }}>
             <defs>
               <style>{`.st0{fill:#05ed96}`}</style>
@@ -86,7 +86,7 @@ export function Hero() {
 
       {/* Scroll cue */}
       <div
-        className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1.5 opacity-0"
+        className="absolute bottom-3 sm:bottom-6 md:bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1.5 opacity-0"
         style={{ animation: 'fadeIn 1s ease forwards 1.5s' }}
       >
         <div

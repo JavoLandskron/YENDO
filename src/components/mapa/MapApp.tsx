@@ -6,8 +6,10 @@ import dynamic from 'next/dynamic'
 import type { Point } from '@/lib/types'
 import { haversineDistance } from '@/lib/map-utils'
 import { Sidebar } from './Sidebar'
+import { Onboarding } from './Onboarding'
 
 const SEARCH_DEBOUNCE_MS = 300
+const ONBOARDING_STORAGE_KEY = 'yendo:onboarding:v1'
 
 interface PointsResponse {
   points: Point[]
@@ -120,6 +122,11 @@ export function MapApp() {
   const [filter, setFilter] = useState('all')
   const [notification, setNotification] = useState<string | null>(null)
   const [sheetOpen, setSheetOpen] = useState(false)
+  // null = aún no chequeado en localStorage; true/false = decisión tomada
+  const [showOnboarding, setShowOnboarding] = useState<boolean | null>(null)
+  // Snapshot del valor inicial — usado para decidir auto-geolocate solo en
+  // returning users, sin re-disparar cuando completan onboarding manualmente.
+  const initialOnboardingSeen = useRef<boolean | null>(null)
   const notificationTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const debouncedSearch = useDebouncedValue(search.trim(), SEARCH_DEBOUNCE_MS)
 
@@ -176,7 +183,22 @@ export function MapApp() {
     }
   }, [])
 
+  // Decide on mount si mostrar onboarding (first-time) o saltarlo (returning).
   useEffect(() => {
+    let seen = false
+    try {
+      seen = localStorage.getItem(ONBOARDING_STORAGE_KEY) === '1'
+    } catch {
+      // Storage no disponible (private mode, etc.) → tratar como first-time.
+    }
+    initialOnboardingSeen.current = seen
+    setShowOnboarding(!seen)
+  }, [])
+
+  // Auto-geolocate SOLO para returning users (que se saltean el onboarding).
+  // Los first-time users disparan geolocalización desde el botón del onboarding.
+  useEffect(() => {
+    if (initialOnboardingSeen.current !== true) return
     if (!navigator.geolocation) return
     navigator.geolocation.getCurrentPosition(
       (pos) => {
@@ -186,6 +208,26 @@ export function MapApp() {
       },
       () => { /* permiso denegado — el botón sigue disponible */ }
     )
+  }, [showOnboarding, showNotif])
+
+  const handleOnboardingComplete = useCallback((askLocation: boolean) => {
+    try {
+      localStorage.setItem(ONBOARDING_STORAGE_KEY, '1')
+    } catch {
+      // Si falla, igual cerramos el onboarding en sesión.
+    }
+    setShowOnboarding(false)
+
+    if (askLocation && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setSelectedIdx(null)
+          setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude })
+          showNotif('Mostrando los puntos más cercanos a tu ubicación.')
+        },
+        () => showNotif('No pudimos obtener tu ubicación. Podés intentarlo después.')
+      )
+    }
   }, [showNotif])
 
   const points = useMemo(() => {
@@ -228,6 +270,9 @@ export function MapApp() {
 
   return (
     <div className="fixed inset-0 h-[100dvh] w-full flex flex-col overflow-hidden overscroll-none md:relative">
+
+      {/* ── Onboarding overlay (first-time only) ─────────── */}
+      {showOnboarding && <Onboarding onComplete={handleOnboardingComplete} />}
 
       {/* ── Header ───────────────────────────────────────── */}
       <header className="shrink-0 relative flex items-center px-4 md:px-6 py-2.5 md:py-3.5 bg-[#080808] border-b border-[rgba(5,237,150,0.12)] z-[1000]">

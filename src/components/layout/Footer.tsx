@@ -26,7 +26,7 @@ export function Footer() {
           ))}
         </ul>
         <div className="font-[family-name:var(--font-dm-sans)] text-[0.7rem] md:text-[0.72rem] text-[rgba(244,241,232,0.2)] tracking-[0.04em] leading-[1.5]">
-          © 2025 YENDO · Tómala fría. Tráela vacía.
+          © 2026 YENDO · Tómala fría. Tráela vacía.
         </div>
       </div>
     </footer>
