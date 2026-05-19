@@ -1,7 +1,7 @@
 'use client'
 
 import 'leaflet/dist/leaflet.css'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { Point } from '@/lib/types'
 import { formatDistance, MAT_SHORT, POINT_TYPE_LABELS } from '@/lib/map-utils'
 
@@ -14,7 +14,6 @@ interface MapViewProps {
 
 type CircleMarker = import('leaflet').CircleMarker
 type CircleMarkerOptions = import('leaflet').CircleMarkerOptions
-type LatLngBounds = import('leaflet').LatLngBounds
 type Marker      = import('leaflet').Marker
 type Renderer = import('leaflet').Renderer
 type LeafletContainer = HTMLDivElement & { _leaflet_id?: number }
@@ -44,19 +43,7 @@ export function MapView({ points, selectedIdx, onSelect, userLocation }: MapView
   const pinMarkerRef = useRef<Marker | null>(null)           // divIcon para el seleccionado
   const userMarkerRef = useRef<import('leaflet').CircleMarker | null>(null)
   const markerRendererRef = useRef<Renderer | null>(null)
-  const [renderBounds, setRenderBounds] = useState<LatLngBounds | null>(null)
   const [mapReady, setMapReady] = useState(false)
-
-  // No depender de selectedIdx: el pin marker (creado en el effect de selección)
-  // lleva el popup y siempre se renderiza, esté o no su circleMarker en bounds.
-  // Incluirlo acá causaba re-render completo de markers en cada selección,
-  // lo que cerraba el popup recién abierto.
-  const renderedPoints = useMemo(() => {
-    const indexedPoints = points.map((point, idx) => ({ point, idx }))
-    return renderBounds
-      ? indexedPoints.filter(({ point }) => renderBounds.contains([point.lat, point.lng]))
-      : indexedPoints
-  }, [points, renderBounds])
 
   // Init map
   useEffect(() => {
@@ -77,13 +64,11 @@ export function MapView({ points, selectedIdx, onSelect, userLocation }: MapView
         center: [-33.45, -70.65],
         zoom: 11,
         zoomControl: false,
-        preferCanvas: true,
       })
-      markerRendererRef.current = L.canvas({ padding: 0.5 })
-
-      const updateRenderBounds = () => {
-        setRenderBounds(map.getBounds().pad(0.35))
-      }
+      // SVG renderer con padding grande: el <svg> se dibuja cubriendo bien
+      // más allá del viewport, así Leaflet puede animar pan/zoom sin tener
+      // que recrear/reagregar markers cuando uno entra o sale del viewport.
+      markerRendererRef.current = L.svg({ padding: 2 })
 
       // Zoom controls top-right, leaving bottom clear for the sheet
       L.control.zoom({ position: 'topright' }).addTo(map)
@@ -94,10 +79,7 @@ export function MapView({ points, selectedIdx, onSelect, userLocation }: MapView
         maxZoom: 19,
       }).addTo(map)
 
-      map.on('moveend zoomend resize', updateRenderBounds)
-
       leafletMap.current = map
-      updateRenderBounds()
       setMapReady(true)
     })
 
@@ -115,9 +97,14 @@ export function MapView({ points, selectedIdx, onSelect, userLocation }: MapView
   const onSelectRef = useRef(onSelect)
   useEffect(() => { onSelectRef.current = onSelect }, [onSelect])
 
-  // Render markers — diff incremental: solo agrega los que entran y quita
-  // los que salen de bounds. Los que ya están se mantienen intactos para
-  // evitar el parpadeo/refresco al hacer pan o zoom.
+  // selectedIdx en un ref para consultarlo dentro del effect de markers sin
+  // agregarlo como dependencia (que recrearía todos los markers en cada select).
+  const selectedIdxRef = useRef(selectedIdx)
+  useEffect(() => { selectedIdxRef.current = selectedIdx }, [selectedIdx])
+
+  // Render markers — se ejecuta solo cuando cambia la data (filtro/búsqueda/
+  // userLocation re-sort), NO cuando el usuario hace pan o zoom. Todos los
+  // puntos se montan una sola vez; SVG los mueve fluido con el mapa.
   useEffect(() => {
     if (!mapReady || !leafletMap.current) return
 
@@ -126,21 +113,15 @@ export function MapView({ points, selectedIdx, onSelect, userLocation }: MapView
     import('leaflet').then((L) => {
       if (cancelled || !leafletMap.current) return
 
-      const existing = markersRef.current
-      const nextIdxs = new Set<number>(renderedPoints.map(({ idx }) => idx))
+      // Limpiamos todo y montamos de nuevo: como el array `points` puede
+      // venir reordenado (sort por distancia al userLocation), los `idx`
+      // pueden no corresponderse entre renders → la única opción correcta
+      // es recrear.
+      markersRef.current.forEach((m) => m.remove())
+      markersRef.current = new Map()
 
-      // Quitar markers que ya no están en bounds
-      existing.forEach((marker, idx) => {
-        if (!nextIdxs.has(idx)) {
-          marker.remove()
-          existing.delete(idx)
-        }
-      })
-
-      // Agregar solo los nuevos
-      renderedPoints.forEach(({ point, idx }) => {
+      points.forEach((point, idx) => {
         if (!leafletMap.current) return
-        if (existing.has(idx)) return
 
         const hasMetals = point.m.includes('Metales')
         const isPuntoLimpio = point.t === 'PUNTO_LIMPIO'
@@ -166,15 +147,20 @@ export function MapView({ points, selectedIdx, onSelect, userLocation }: MapView
           markerOptions.renderer = markerRendererRef.current
         }
 
+        if (idx === selectedIdxRef.current) {
+          markerOptions.opacity = 0
+          markerOptions.fillOpacity = 0
+        }
+
         const marker = L.circleMarker([point.lat, point.lng], markerOptions)
         marker.on('click', () => onSelectRef.current(idx))
         marker.addTo(leafletMap.current)
-        existing.set(idx, marker)
+        markersRef.current.set(idx, marker)
       })
     })
 
     return () => { cancelled = true }
-  }, [mapReady, renderedPoints])
+  }, [mapReady, points])
 
   // Pin seleccionado: divIcon con pulso + popup + flyTo.
   // El popup se liga al pin marker (no al circleMarker) para que sobreviva
@@ -186,10 +172,21 @@ export function MapView({ points, selectedIdx, onSelect, userLocation }: MapView
     pinMarkerRef.current?.remove()
     pinMarkerRef.current = null
 
+    // Restaura visibilidad de todos los circleMarkers (el seleccionado anterior
+    // pudo haber quedado oculto). Esto evita un "fantasma" del circleMarker
+    // detrás/al lado del pin durante el flyTo.
+    markersRef.current.forEach((m) =>
+      m.setStyle({ opacity: 1, fillOpacity: 1 })
+    )
+
     if (selectedIdx === null) return
 
     const point = points[selectedIdx]
     if (!point) return
+
+    // Oculta el circleMarker del punto seleccionado mientras el pin esté visible
+    const selectedCircle = markersRef.current.get(selectedIdx)
+    selectedCircle?.setStyle({ opacity: 0, fillOpacity: 0 })
 
     const map = leafletMap.current
 
@@ -209,7 +206,22 @@ export function MapView({ points, selectedIdx, onSelect, userLocation }: MapView
 
       pinMarkerRef.current = pin
       pin.openPopup()
-      map.flyTo([point.lat, point.lng], 17, { duration: 1 })
+
+      // Animación fluida hacia el punto. Durante un flyTo con cambio grande
+      // de zoom, Leaflet escala el <svg> de los markers con transform → se
+      // ven gigantes hasta que termina. Ocultamos solo esa capa durante la
+      // animación; el pin (DOM) sigue visible guiando el ojo. Al terminar,
+      // los circleMarkers reaparecen ya dibujados al zoom final correcto.
+      const rendererEl =
+        (markerRendererRef.current as unknown as { _container?: HTMLElement } | null)?._container
+      if (rendererEl) rendererEl.style.visibility = 'hidden'
+
+      const handleFlyEnd = () => {
+        map.off('moveend', handleFlyEnd)
+        if (rendererEl) rendererEl.style.visibility = ''
+      }
+      map.on('moveend', handleFlyEnd)
+      map.flyTo([point.lat, point.lng], 17, { duration: 0.8, easeLinearity: 0.25 })
     })
   }, [selectedIdx, points, mapReady])
 
@@ -225,9 +237,9 @@ export function MapView({ points, selectedIdx, onSelect, userLocation }: MapView
       userMarkerRef.current?.remove()
 
       userMarkerRef.current = L.circleMarker([userLocation.lat, userLocation.lng], {
-        radius: 7,
-        fillColor: '#fff',
-        color: '#05ed96',
+        radius: 8,
+        fillColor: '#2f8bff',
+        color: '#fff',
         weight: 3,
         fillOpacity: 1,
         opacity: 1,
@@ -235,7 +247,17 @@ export function MapView({ points, selectedIdx, onSelect, userLocation }: MapView
         .addTo(leafletMap.current)
         .bindPopup('<div style="color:#f5f2eb;font-size:0.82rem;font-family:sans-serif">Tu ubicación</div>')
 
-      leafletMap.current.flyTo([userLocation.lat, userLocation.lng], 14, { duration: 1 })
+      const map = leafletMap.current
+      const rendererEl =
+        (markerRendererRef.current as unknown as { _container?: HTMLElement } | null)?._container
+      if (rendererEl) rendererEl.style.visibility = 'hidden'
+
+      const handleFlyEnd = () => {
+        map.off('moveend', handleFlyEnd)
+        if (rendererEl) rendererEl.style.visibility = ''
+      }
+      map.on('moveend', handleFlyEnd)
+      map.flyTo([userLocation.lat, userLocation.lng], 14, { duration: 0.8, easeLinearity: 0.25 })
     })
 
     return () => { cancelled = true }

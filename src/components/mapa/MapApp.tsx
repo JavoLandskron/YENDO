@@ -156,6 +156,8 @@ export function MapApp() {
     const query = params.toString()
     const url = query ? `/api/points?${query}` : '/api/points'
 
+    setPointsLoading(true)
+
     fetch(url, { signal: controller.signal })
       .then((res) => {
         if (!res.ok) throw new Error('Error al cargar los puntos')
@@ -243,7 +245,6 @@ export function MapApp() {
   function handleFilterChange(newFilter: string) {
     setFilter(newFilter)
     setSelectedIdx(null)
-    setPointsLoading(true)
   }
 
   // useCallback evita que handleSelect cambie de referencia en cada render,
@@ -302,7 +303,6 @@ export function MapApp() {
             onChange={(e) => {
               setSearch(e.target.value)
               setSelectedIdx(null)
-              setPointsLoading(true)
             }}
             placeholder="Buscar dirección..."
             className="w-full bg-[rgba(255,255,255,0.04)] border border-[rgba(245,242,235,0.08)] rounded-lg pl-8 pr-8 py-2 text-[#f5f2eb] font-[family-name:var(--font-dm-sans)] text-[0.8rem] outline-none placeholder:text-[rgba(245,242,235,0.2)] focus:border-[rgba(5,237,150,0.5)] focus:bg-[rgba(5,237,150,0.03)] transition-all duration-200"
@@ -312,7 +312,6 @@ export function MapApp() {
               onClick={() => {
                 setSearch('')
                 setSelectedIdx(null)
-                setPointsLoading(true)
               }}
               className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[rgba(245,242,235,0.3)] hover:text-[#05ed96] transition-colors text-[0.75rem] leading-none"
             >
