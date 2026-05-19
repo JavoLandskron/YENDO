@@ -94,17 +94,6 @@ export function MapView({ points, selectedIdx, onSelect, userLocation }: MapView
         maxZoom: 19,
       }).addTo(map)
 
-      // Oculta los markers durante el zoom para evitar el artefacto de escala
-      map.on('zoomstart', () => {
-        markersRef.current.forEach((m) =>
-          m.setStyle({ opacity: 0, fillOpacity: 0 })
-        )
-      })
-      map.on('zoomend', () => {
-        markersRef.current.forEach((m) =>
-          m.setStyle({ opacity: 1, fillOpacity: 1 })
-        )
-      })
       map.on('moveend zoomend resize', updateRenderBounds)
 
       leafletMap.current = map
@@ -121,23 +110,37 @@ export function MapView({ points, selectedIdx, onSelect, userLocation }: MapView
     }
   }, [])
 
-  // Render markers
+  // Mantenemos onSelect en un ref para que el efecto de markers no se vuelva
+  // a ejecutar cuando el padre re-renderiza y pasa una nueva referencia.
+  const onSelectRef = useRef(onSelect)
+  useEffect(() => { onSelectRef.current = onSelect }, [onSelect])
+
+  // Render markers — diff incremental: solo agrega los que entran y quita
+  // los que salen de bounds. Los que ya están se mantienen intactos para
+  // evitar el parpadeo/refresco al hacer pan o zoom.
   useEffect(() => {
     if (!mapReady || !leafletMap.current) return
 
     let cancelled = false
 
     import('leaflet').then((L) => {
-      // El mapa pudo haber sido destruido mientras el import resolvía
       if (cancelled || !leafletMap.current) return
 
-      markersRef.current.forEach((m) => m.remove())
-      markersRef.current = new Map()
+      const existing = markersRef.current
+      const nextIdxs = new Set<number>(renderedPoints.map(({ idx }) => idx))
 
-      const newMarkers = new Map<number, CircleMarker>()
+      // Quitar markers que ya no están en bounds
+      existing.forEach((marker, idx) => {
+        if (!nextIdxs.has(idx)) {
+          marker.remove()
+          existing.delete(idx)
+        }
+      })
 
+      // Agregar solo los nuevos
       renderedPoints.forEach(({ point, idx }) => {
         if (!leafletMap.current) return
+        if (existing.has(idx)) return
 
         const hasMetals = point.m.includes('Metales')
         const isPuntoLimpio = point.t === 'PUNTO_LIMPIO'
@@ -164,19 +167,14 @@ export function MapView({ points, selectedIdx, onSelect, userLocation }: MapView
         }
 
         const marker = L.circleMarker([point.lat, point.lng], markerOptions)
-
-        // El popup vive en el pin marker (effect de selección). Acá solo
-        // delegamos el click para que el selection effect cree pin + popup.
-        marker.on('click', () => onSelect(idx))
+        marker.on('click', () => onSelectRef.current(idx))
         marker.addTo(leafletMap.current)
-        newMarkers.set(idx, marker)
+        existing.set(idx, marker)
       })
-
-      markersRef.current = newMarkers
     })
 
     return () => { cancelled = true }
-  }, [mapReady, renderedPoints, onSelect])
+  }, [mapReady, renderedPoints])
 
   // Pin seleccionado: divIcon con pulso + popup + flyTo.
   // El popup se liga al pin marker (no al circleMarker) para que sobreviva

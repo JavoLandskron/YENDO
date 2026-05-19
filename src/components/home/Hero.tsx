@@ -72,7 +72,7 @@ export function Hero() {
         {/* Large logo mark — breathing + slow rotation */}
         <div className="reveal mt-auto -translate-y-3 md:translate-y-0 mb-[-1rem] md:mb-[-1.5rem]">
           <div className="y-breathe inline-block">
-            <div className="y-rotate-slow inline-block" style={{ filter: 'drop-shadow(0 0 40px rgba(5,237,150,0.18))' }}>
+            <div className="inline-block" style={{ filter: 'drop-shadow(0 0 40px rgba(5,237,150,0.18))' }}>
               <svg id="Capa_1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1080" className="w-[170px] h-[170px] md:w-[320px] md:h-[320px]" style={{ display: 'block' }}>
                 <defs>
                   <style>{`.st0{fill:#05ed96}`}</style>
